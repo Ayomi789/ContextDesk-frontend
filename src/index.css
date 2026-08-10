@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* ===== LIGHT ===== */
+:root, .light {
+  --color-bg: #f5f3f0;
+  --color-bg-card: #ffffff;
+  --color-bg-elevated: #edebe8;
+  --color-bg-hover: #e5e2de;
+  --color-border: #d9d5cf;
+  --color-border-light: #cac5bd;
+  --color-text: #171412;
+  --color-text-muted: #65605a;
+  --color-text-dim: #9e978f;
+  --color-accent: #171412;
+  --color-accent-hover: #302c28;
+  --color-accent-dim: #edebe8;
+  --color-accent-text: #171412;
+  --color-success: #1a7f37;
+  --color-success-dim: #dafbe1;
+  --color-warning: #bf6a02;
+  --color-warning-dim: #fff4d4;
+  --color-danger: #cf222e;
+  --color-danger-dim: #ffebe9;
+  --color-info: #0969da;
+  --color-info-dim: #ddf4ff;
+  --scrollbar-thumb: #cac5bd;
+  --scrollbar-hover: #b5afa6;
+}
+
+/* ===== DARK ===== */
+.dark {
+  --color-bg: #0e0e10;
+  --color-bg-card: #18181b;
+  --color-bg-elevated: #212124;
+  --color-bg-hover: #2b2b30;
+  --color-border: #2e2e33;
+  --color-border-light: #3b3b42;
+  --color-text: #ececee;
+  --color-text-muted: #8e8e99;
+  --color-text-dim: #55555f;
+  --color-accent: #ececee;
+  --color-accent-hover: #d4d4d8;
+  --color-accent-dim: rgba(236, 236, 238, 0.08);
+  --color-accent-text: #ececee;
+  --color-success: #3fb950;
+  --color-success-dim: rgba(63, 185, 80, 0.12);
+  --color-warning: #d29922;
+  --color-warning-dim: rgba(210, 153, 34, 0.12);
+  --color-danger: #f85149;
+  --color-danger-dim: rgba(248, 81, 73, 0.12);
+  --color-info: #58a6ff;
+  --color-info-dim: rgba(88, 166, 255, 0.12);
+  --scrollbar-thumb: #3b3b42;
+  --scrollbar-hover: #4a4a52;
+}
+
+@theme {
+  --color-bg: var(--color-bg);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-border: var(--color-border);
+  --color-border-light: var(--color-border-light);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-dim: var(--color-text-dim);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-dim: var(--color-accent-dim);
+  --color-accent-text: var(--color-accent-text);
+  --color-success: var(--color-success);
+  --color-success-dim: var(--color-success-dim);
+  --color-warning: var(--color-warning);
+  --color-warning-dim: var(--color-warning-dim);
+  --color-danger: var(--color-danger);
+  --color-danger-dim: var(--color-danger-dim);
+  --color-info: var(--color-info);
+  --color-info-dim: var(--color-info-dim);
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', ui-monospace, monospace;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+html { scroll-behavior: smooth; }
+input, textarea, select { font-family: inherit; }
