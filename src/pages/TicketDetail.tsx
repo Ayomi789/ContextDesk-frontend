@@ -11,8 +11,10 @@ import type {
 import {
   StatusBadge,
   PriorityBadge,
-  TagBadge,
 } from '../components/StatusBadge';
+import Select from '../components/Select';
+import { formatDateTime } from '../lib/dates';
+import { TicketDetailSkeleton } from '../components/Skeleton';
 import {
   Send,
   Wand2,
@@ -49,19 +51,18 @@ export default function TicketDetail() {
   const [editStatus, setEditStatus] = useState('');
   const [editPriority, setEditPriority] = useState('');
   const [editAssignee, setEditAssignee] = useState('');
-  const [editTags, setEditTags] = useState('');
 
   const messagesEnd = useRef<HTMLDivElement | null>(null);
 
   const [saving, setSaving] = useState(false);
+
   const fetchAll = async () => {
     if (!id) return;
 
     setLoading(true);
 
     try {
-      // Load the ticket first.
-      // A failure here means the ticket itself could not be loaded.
+      // Load ticket
       const ticketResponse = await api.get<{
         success: boolean;
         ticket: Ticket & {
@@ -77,10 +78,8 @@ export default function TicketDetail() {
       setEditStatus(t.status);
       setEditPriority(t.priority);
       setEditAssignee(t.assigneeId || '');
-      setEditTags((t.tags || []).join(', '));
 
-      // Load messages separately.
-      // If messages fail, the ticket should still display.
+      // Load messages
       try {
         const messageResponse = await api.get<{
           success: boolean;
@@ -93,9 +92,7 @@ export default function TicketDetail() {
         setMessages([]);
       }
 
-      // Load agents separately.
-      // /users is currently not wired in the backend,
-      // so a 404 here must not break the ticket page.
+      // Load agents
       try {
         const agentsResponse = await api.get<{
           success: boolean;
@@ -108,7 +105,7 @@ export default function TicketDetail() {
         setAgents([]);
       }
 
-      // Load contact separately.
+      // Load contact
       if (t.contactId) {
         try {
           const contactResponse = await api.get<{
@@ -125,7 +122,7 @@ export default function TicketDetail() {
         setContact(null);
       }
 
-      // Load account separately.
+      // Load account
       if (t.accountId) {
         try {
           const accountResponse = await api.get<{
@@ -204,7 +201,6 @@ export default function TicketDetail() {
     }
   };
 
-  
   const updateTicket = async () => {
     if (!id || saving) return;
 
@@ -236,11 +232,7 @@ export default function TicketDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <Loader2 className="w-6 h-6 animate-spin text-accent" />
-      </div>
-    );
+    return <TicketDetailSkeleton />;
   }
 
   if (!ticket) {
@@ -260,14 +252,37 @@ export default function TicketDetail() {
     );
   }
 
+  /*
+   * SLA
+   *
+   * A ticket is:
+   *
+   * - Breached: deadline has already passed
+   * - At Risk: deadline is within the next 2 hours
+   * - Within SLA: more than 2 hours remain
+   *
+   * Resolved tickets are not considered at risk or breached.
+   */
+
   const slaDate = ticket.slaDueAt
     ? new Date(ticket.slaDueAt)
     : null;
 
-  const slaAtRisk =
-    slaDate &&
-    slaDate < new Date() &&
+  const now = new Date();
+
+  const SLA_RISK_WINDOW_MS =
+    2 * 60 * 60 * 1000;
+
+  const slaBreached =
+    !!slaDate &&
+    slaDate.getTime() < now.getTime() &&
     ticket.status !== 'RESOLVED';
+
+  const slaAtRisk =
+    !!slaDate &&
+    !slaBreached &&
+    ticket.status !== 'RESOLVED' &&
+    slaDate.getTime() - now.getTime() <= SLA_RISK_WINDOW_MS;
 
   return (
     <div className="space-y-4">
@@ -298,17 +313,28 @@ export default function TicketDetail() {
 
                   <PriorityBadge priority={ticket.priority} />
 
-                  {ticket.tags?.map((tag) => (
-                    <TagBadge
-                      key={tag}
-                      label={tag}
-                    />
-                  ))}
+                  {ticket.triageReason && (
+                    <span
+                      className="text-xs text-text-dim italic"
+                      title="Priority set automatically by AI triage"
+                    >
+                      AI: {ticket.triageReason}
+                    </span>
+                  )}
 
-                  {slaAtRisk && (
+                  {/* SLA Breached */}
+                  {slaBreached && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-danger-dim text-danger">
                       <AlertTriangle className="w-3 h-3" />
                       SLA Breached
+                    </span>
+                  )}
+
+                  {/* SLA At Risk */}
+                  {slaAtRisk && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning-dim text-warning">
+                      <AlertTriangle className="w-3 h-3" />
+                      SLA At Risk
                     </span>
                   )}
                 </div>
@@ -325,8 +351,14 @@ export default function TicketDetail() {
             {/* Edit ticket */}
             {editing && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
+                initial={{
+                  opacity: 0,
+                  height: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                  height: 'auto',
+                }}
                 className="mt-4 pt-4 border-t border-border"
               >
                 <div className="grid grid-cols-2 gap-3">
@@ -336,20 +368,18 @@ export default function TicketDetail() {
                       Status
                     </label>
 
-                    <select
+                    <Select
                       value={editStatus}
-                      onChange={(e) =>
-                        setEditStatus(e.target.value)
-                      }
-                      className="w-full px-3 py-2 bg-bg-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent"
-                    >
-                      <option value="NEW">New</option>
-                      <option value="IN_PROGRESS">
-                        In Progress
-                      </option>
-                      <option value="WAITING">Waiting</option>
-                      <option value="RESOLVED">Resolved</option>
-                    </select>
+                      onChange={setEditStatus}
+                      variant="elevated"
+                      className="w-full"
+                      options={[
+                        { value: 'NEW', label: 'New' },
+                        { value: 'IN_PROGRESS', label: 'In Progress' },
+                        { value: 'WAITING', label: 'Waiting' },
+                        { value: 'RESOLVED', label: 'Resolved' },
+                      ]}
+                    />
                   </div>
 
                   {/* PRIORITY */}
@@ -358,18 +388,18 @@ export default function TicketDetail() {
                       Priority
                     </label>
 
-                    <select
+                    <Select
                       value={editPriority}
-                      onChange={(e) =>
-                        setEditPriority(e.target.value)
-                      }
-                      className="w-full px-3 py-2 bg-bg-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent"
-                    >
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HIGH">High</option>
-                      <option value="URGENT">Urgent</option>
-                    </select>
+                      onChange={setEditPriority}
+                      variant="elevated"
+                      className="w-full"
+                      options={[
+                        { value: 'LOW', label: 'Low' },
+                        { value: 'MEDIUM', label: 'Medium' },
+                        { value: 'HIGH', label: 'High' },
+                        { value: 'URGENT', label: 'Urgent' },
+                      ]}
+                    />
                   </div>
 
                   {/* ASSIGNEE */}
@@ -378,43 +408,22 @@ export default function TicketDetail() {
                       Assignee
                     </label>
 
-                    <select
+                    <Select
                       value={editAssignee}
-                      onChange={(e) =>
-                        setEditAssignee(e.target.value)
-                      }
-                      className="w-full px-3 py-2 bg-bg-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent"
-                    >
-                      <option value="">
-                        Unassigned
-                      </option>
-
-                      {agents.map((agent) => (
-                        <option
-                          key={agent.id}
-                          value={agent.id}
-                        >
-                          {agent.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* TAGS */}
-                  <div>
-                    <label className="block text-xs font-medium text-text-muted mb-1">
-                      Tags
-                    </label>
-
-                    <input
-                      value={editTags}
-                      onChange={(e) =>
-                        setEditTags(e.target.value)
-                      }
-                      placeholder="billing, urgent"
-                      className="w-full px-3 py-2 bg-bg-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent"
+                      onChange={setEditAssignee}
+                      variant="elevated"
+                      className="w-full"
+                      placeholder="Unassigned"
+                      options={[
+                        { value: '', label: 'Unassigned' },
+                        ...agents.map((agent) => ({
+                          value: agent.id,
+                          label: agent.name,
+                        })),
+                      ]}
                     />
                   </div>
+
                 </div>
 
                 <div className="flex justify-end gap-2 mt-3">
@@ -426,11 +435,13 @@ export default function TicketDetail() {
                   </button>
 
                   <button
-                      onClick={updateTicket}
-                      disabled={saving}
-                      className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {saving ? 'Saving...' : 'Save'}
+                    onClick={updateTicket}
+                    disabled={saving}
+                    className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {saving
+                      ? 'Saving...'
+                      : 'Save'}
                   </button>
                 </div>
               </motion.div>
@@ -466,36 +477,38 @@ export default function TicketDetail() {
                       : ''
                   }`}
                 >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-full bg-bg-elevated flex items-center justify-center text-text-muted text-xs font-semibold">
-                    {message.senderType === 'CUSTOMER'
-                      ? 'C'
-                      : message.author?.name?.charAt(0).toUpperCase() || 'A'}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-bg-elevated flex items-center justify-center text-text-muted text-xs font-semibold">
+                      {message.senderType === 'CUSTOMER'
+                        ? 'C'
+                        : message.author?.name
+                            ?.charAt(0)
+                            .toUpperCase() || 'A'}
+                    </div>
+
+                    <span className="text-sm font-medium text-text">
+                      {message.senderType === 'CUSTOMER'
+                        ? 'Customer'
+                        : message.author?.name || 'Agent'}
+                    </span>
+
+                    {message.senderType === 'CUSTOMER' && (
+                      <span className="text-xs text-text-dim">
+                        Customer
+                      </span>
+                    )}
+
+                    {message.isInternalNote && (
+                      <span className="inline-flex items-center gap-1 text-xs text-warning">
+                        <Lock className="w-3 h-3" />
+                        Internal
+                      </span>
+                    )}
+
+                    <span className="text-xs text-text-dim ml-auto">
+                      {formatDateTime(message.createdAt)}
+                    </span>
                   </div>
-
-                  <span className="text-sm font-medium text-text">
-                    {message.senderType === 'CUSTOMER'
-                      ? 'Customer'
-                      : message.author?.name || 'Agent'}
-                  </span>
-
-                  {message.senderType === 'CUSTOMER' && (
-                    <span className="text-xs text-text-dim">
-                      Customer
-                    </span>
-                  )}
-
-                  {message.isInternalNote && (
-                    <span className="inline-flex items-center gap-1 text-xs text-warning">
-                      <Lock className="w-3 h-3" />
-                      Internal
-                    </span>
-                  )}
-
-                  <span className="text-xs text-text-dim ml-auto">
-                    {new Date(message.createdAt).toLocaleString()}
-                  </span>
-                </div>
 
                   <p className="text-sm text-text-muted whitespace-pre-wrap pl-9">
                     {message.body}
@@ -510,7 +523,9 @@ export default function TicketDetail() {
             <div className="p-4 border-t border-border">
               <div className="flex items-center gap-2 mb-2">
                 <button
-                  onClick={() => setIsInternal(false)}
+                  onClick={() =>
+                    setIsInternal(false)
+                  }
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                     !isInternal
                       ? 'bg-accent text-bg'
@@ -522,7 +537,9 @@ export default function TicketDetail() {
                 </button>
 
                 <button
-                  onClick={() => setIsInternal(true)}
+                  onClick={() =>
+                    setIsInternal(true)
+                  }
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                     isInternal
                       ? 'bg-warning-dim text-warning border border-warning/30'
@@ -550,7 +567,9 @@ export default function TicketDetail() {
 
               <textarea
                 value={reply}
-                onChange={(e) => setReply(e.target.value)}
+                onChange={(e) =>
+                  setReply(e.target.value)
+                }
                 rows={3}
                 className="w-full px-3 py-2.5 bg-bg-elevated border border-border rounded-lg text-sm text-text placeholder-text-dim focus:outline-none focus:border-accent resize-none"
                 placeholder={
@@ -648,17 +667,21 @@ export default function TicketDetail() {
 
               <p
                 className={`text-sm font-medium ${
-                  slaAtRisk
+                  slaBreached
                     ? 'text-danger'
+                    : slaAtRisk
+                    ? 'text-warning'
                     : 'text-success'
                 }`}
               >
-                Due: {slaDate.toLocaleString()}
+                Due: {formatDateTime(slaDate)}
               </p>
 
               <p className="text-xs text-text-dim mt-1">
-                {slaAtRisk
+                {slaBreached
                   ? 'SLA has been breached'
+                  : slaAtRisk
+                  ? 'SLA deadline is approaching'
                   : 'Within SLA window'}
               </p>
             </div>
@@ -687,7 +710,9 @@ export default function TicketDetail() {
 
                       <div className="flex items-center gap-2 mt-1">
                         <StatusBadge
-                          status={previousTicket.status}
+                          status={
+                            previousTicket.status
+                          }
                         />
 
                         <span className="text-[10px] text-text-dim">

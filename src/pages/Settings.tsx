@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import api from '../lib/api';
 import type { CrmUser } from '../lib/types';
+import Select from '../components/Select';
 import {
-  User, Lock, Bell, Sun, Moon, Monitor, Loader2, Check, Shield, Globe, Mail
+  User, Lock, Bell, Sun, Moon, Monitor, Loader2, Check, Shield, Globe, Mail, UserX
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-type Tab = 'profile' | 'password' | 'notifications' | 'appearance';
+type Tab = 'profile' | 'password' | 'notifications' | 'appearance' | 'account';
 
 export default function Settings() {
   const [tab, setTab] = useState<Tab>('profile');
@@ -18,6 +20,7 @@ export default function Settings() {
     { key: 'password', label: 'Password', icon: Lock },
     { key: 'notifications', label: 'Notifications', icon: Bell },
     { key: 'appearance', label: 'Appearance', icon: Sun },
+    { key: 'account', label: 'Account', icon: UserX },
   ];
 
   return (
@@ -58,6 +61,7 @@ export default function Settings() {
             {tab === 'password' && <PasswordTab />}
             {tab === 'notifications' && <NotificationsTab />}
             {tab === 'appearance' && <AppearanceTab />}
+            {tab === 'account' && <AccountTab />}
           </motion.div>
         </div>
       </div>
@@ -67,7 +71,7 @@ export default function Settings() {
 
 /* ────── Profile ────── */
 function ProfileTab() {
-  const { user } = useAuth();
+  const { user, refresh, logout } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
@@ -83,7 +87,8 @@ function ProfileTab() {
     if (!name.trim()) { setError('Name is required'); return; }
     setSaving(true); setError(''); setSaved(false);
     try {
-      await api.put('/settings', { id: user?.id, name, email });
+      await api.patch('/users/me', { name: name.trim(), email: email.trim() });
+      await refresh();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
@@ -158,9 +163,92 @@ function ProfileTab() {
   );
 }
 
+function AccountTab() {
+  const { user } = useAuth();
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-lg font-bold text-text">Account</h1>
+        <p className="text-sm text-text-muted mt-0.5">
+          {user?.name} · {user?.email} · {user?.organization?.name}
+        </p>
+      </div>
+      <DangerZone />
+    </div>
+  );
+}
+
+function DangerZone() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDelete = async () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    setDeleting(true);
+    setError('');
+    try {
+      await api.delete('/users/me');
+      logout();
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete account');
+      setConfirming(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="bg-bg-card border border-danger/30 rounded-xl mt-4">
+      <div className="px-6 py-4 border-b border-border">
+        <h2 className="text-sm font-semibold text-danger">Danger zone</h2>
+        <p className="text-xs text-text-muted mt-0.5">
+          Deleting your account removes your messages, clears your
+          assignments, and cannot be undone
+        </p>
+      </div>
+      <div className="p-6">
+        {error && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-danger-dim text-danger text-sm">
+            {error}
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-text">Delete account</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              {confirming
+                ? 'Click again to confirm — really delete?'
+                : 'Your tickets stay, unassigned'}
+            </p>
+          </div>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${
+              confirming
+                ? 'bg-danger hover:opacity-90 text-bg'
+                : 'bg-danger-dim text-danger hover:bg-danger hover:text-bg'
+            }`}
+          >
+            {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {confirming ? 'Confirm delete' : 'Delete account'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ────── Password ────── */
 function PasswordTab() {
-  const { user } = useAuth();
   const [current, setCurrent] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -175,7 +263,7 @@ function PasswordTab() {
     if (newPw !== confirm) { setError('Passwords do not match'); return; }
     setSaving(true); setError(''); setSaved(false);
     try {
-      await api.put('/settings', { id: user?.id, action: 'password', current_password: current, new_password: newPw });
+      await api.patch('/users/me/password', { currentPassword: current, newPassword: newPw });
       setSaved(true);
       setCurrent(''); setNewPw(''); setConfirm('');
       setTimeout(() => setSaved(false), 3000);
@@ -244,28 +332,62 @@ function PasswordTab() {
 }
 
 /* ────── Notifications ────── */
-function NotificationsTab() {
-  const [prefs, setPrefs] = useState({
-    email_new_ticket: true,
-    email_ticket_assigned: true,
-    email_customer_reply: true,
-    email_sla_warning: true,
-    email_ticket_resolved: false,
-    push_new_ticket: true,
-    push_ticket_assigned: true,
-    push_customer_reply: true,
-    push_sla_warning: true,
-    push_ticket_resolved: false,
-  });
-  const [saved, setSaved] = useState(false);
+const PREF_KEYS = [
+  'email_new_ticket',
+  'email_ticket_assigned',
+  'email_customer_reply',
+  'email_sla_warning',
+  'email_ticket_resolved',
+  'push_new_ticket',
+  'push_ticket_assigned',
+  'push_customer_reply',
+  'push_sla_warning',
+  'push_ticket_resolved',
+] as const;
 
-  const toggle = (key: string) => {
-    setPrefs(p => ({ ...p, [key]: !(p as any)[key] }));
+type PrefKey = (typeof PREF_KEYS)[number];
+
+function NotificationsTab() {
+  const [prefs, setPrefs] = useState<Record<PrefKey, boolean> | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api
+      .get<{ success: boolean; preferences: Record<PrefKey, boolean> }>(
+        '/notifications/preferences'
+      )
+      .then((response) => {
+        setPrefs(response.data.preferences);
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load preferences');
+      });
+  }, []);
+
+  const toggle = (key: PrefKey) => {
+    setPrefs((p) => (p ? { ...p, [key]: !p[key] } : p));
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    if (!prefs) return;
+    setSaving(true);
+    setError('');
+    setSaved(false);
+    try {
+      const response = await api.patch<{
+        success: boolean;
+        preferences: Record<PrefKey, boolean>;
+      }>('/notifications/preferences', prefs);
+      setPrefs(response.data.preferences);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
@@ -307,9 +429,18 @@ function NotificationsTab() {
     },
   ];
 
+  if (!prefs && !error) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="w-6 h-6 animate-spin text-accent" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {saved && <div className="px-3 py-2 rounded-lg bg-success-dim text-success text-sm flex items-center gap-2"><Check className="w-4 h-4" /> Notification preferences saved</div>}
+      {error && <div className="px-3 py-2 rounded-lg bg-danger-dim text-danger text-sm">{error}</div>}
 
       {sections.map(section => (
         <div key={section.title} className="bg-bg-card border border-border rounded-xl">
@@ -324,7 +455,7 @@ function NotificationsTab() {
                   <p className="text-[13px] font-medium text-text">{item.label}</p>
                   <p className="text-[12px] text-text-muted mt-0.5">{item.desc}</p>
                 </div>
-                <Toggle checked={(prefs as any)[item.key]} onChange={() => toggle(item.key)} />
+                <Toggle checked={prefs?.[item.key as PrefKey] ?? false} onChange={() => toggle(item.key as PrefKey)} />
               </div>
             ))}
           </div>
@@ -334,8 +465,10 @@ function NotificationsTab() {
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="px-4 py-2 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-medium transition-colors"
+          disabled={saving || !prefs}
+          className="px-4 py-2 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
         >
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           Save Preferences
         </button>
       </div>
@@ -344,8 +477,30 @@ function NotificationsTab() {
 }
 
 /* ────── Appearance ────── */
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+];
+
 function AppearanceTab() {
-  const { theme, toggle } = useTheme();
+  const { theme, toggle, density, setDensity } = useTheme();
+  const [timezone, setTimezone] = useState(
+    () =>
+      localStorage.getItem('nexus-timezone') ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
+
+  const changeTimezone = (next: string) => {
+    setTimezone(next);
+    localStorage.setItem('nexus-timezone', next);
+  };
 
   const options: { value: string; label: string; icon: typeof Sun; desc: string }[] = [
     { value: 'light', label: 'Light', icon: Sun, desc: 'Warm, paper-toned light theme' },
@@ -390,16 +545,23 @@ function AppearanceTab() {
         <div className="mt-6 pt-6 border-t border-border">
           <label className="block text-xs font-medium text-text-muted mb-3">Interface density</label>
           <div className="flex gap-2">
-            {['Compact', 'Default', 'Comfortable'].map((d, i) => (
+            {(
+              [
+                { key: 'compact', label: 'Compact' },
+                { key: 'default', label: 'Default' },
+                { key: 'comfortable', label: 'Comfortable' },
+              ] as const
+            ).map((d) => (
               <button
-                key={d}
+                key={d.key}
+                onClick={() => setDensity(d.key)}
                 className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
-                  i === 1
+                  density === d.key
                     ? 'bg-bg-elevated text-text border border-border'
                     : 'text-text-muted hover:bg-bg-hover'
                 }`}
               >
-                {d}
+                {d.label}
               </button>
             ))}
           </div>
@@ -408,18 +570,19 @@ function AppearanceTab() {
 
         <div className="mt-6 pt-6 border-t border-border">
           <label className="block text-xs font-medium text-text-muted mb-3">Timezone</label>
-          <select className="w-full sm:w-72 px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent transition-colors">
-            <option>{Intl.DateTimeFormat().resolvedOptions().timeZone}</option>
-            <option>America/New_York</option>
-            <option>America/Chicago</option>
-            <option>America/Denver</option>
-            <option>America/Los_Angeles</option>
-            <option>Europe/London</option>
-            <option>Europe/Berlin</option>
-            <option>Asia/Tokyo</option>
-            <option>Asia/Shanghai</option>
-            <option>Australia/Sydney</option>
-          </select>
+          <div className="w-full sm:w-72">
+            <Select
+              value={timezone}
+              onChange={changeTimezone}
+              className="w-full"
+              options={Array.from(
+                new Set([
+                  timezone,
+                  ...TIMEZONES,
+                ])
+              ).map((tz) => ({ value: tz, label: tz }))}
+            />
+          </div>
           <p className="text-[11px] text-text-dim mt-2">All dates and times will be displayed in this timezone</p>
         </div>
       </div>

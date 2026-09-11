@@ -1,13 +1,29 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
+type Density = 'compact' | 'default' | 'comfortable';
 
 interface ThemeContextType {
   theme: Theme;
   toggle: () => void;
+  density: Density;
+  setDensity: (density: Density) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({ theme: 'light', toggle: () => {} });
+const ThemeContext = createContext<ThemeContextType>({
+  theme: 'light',
+  toggle: () => {},
+  density: 'default',
+  setDensity: () => {},
+});
+
+function storedDensity(): Density {
+  if (typeof window === 'undefined') return 'default';
+  const saved = localStorage.getItem('nexus-density');
+  return saved === 'compact' || saved === 'comfortable'
+    ? saved
+    : 'default';
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -16,6 +32,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     return 'light';
   });
+  const [density, setDensityState] = useState<Density>(storedDensity);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -24,10 +41,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('nexus-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.density = density;
+    localStorage.setItem('nexus-density', density);
+  }, [density]);
+
   const toggle = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
+  const setDensity = (next: Density) => setDensityState(next);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
+    <ThemeContext.Provider value={{ theme, toggle, density, setDensity }}>
       {children}
     </ThemeContext.Provider>
   );

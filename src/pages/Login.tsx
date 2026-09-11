@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { googleConfigured } from '../App';
+import api from '../lib/api';
 import { LogoMark } from '../components/Logo';
 import { Loader2, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -11,12 +14,66 @@ export default function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, signup } = useAuth();
+  const [inviteInfo, setInviteInfo] = useState<{
+    email: string;
+    organizationName: string;
+  } | null>(null);
+  const { login, signup, google } = useAuth();
+
+  const handleGoogleSuccess = async (credential?: string) => {
+    if (!credential) {
+      setError('Google sign-in failed, please try again.');
+      return;
+    }
+    if (isSignUp && !inviteToken && !orgName.trim()) {
+      setError('Enter your company name first, then continue with Google.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await google(credential, {
+        organizationName:
+          isSignUp && !inviteToken ? orgName.trim() : undefined,
+        inviteToken: inviteToken || undefined,
+      });
+      navigate('/app');
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite') || '';
+  const inviteId = inviteToken.split('.')[0] || '';
+
+  useEffect(() => {
+    if (!inviteToken) {
+      setInviteInfo(null);
+      return;
+    }
+    setIsSignUp(true);
+    api
+      .get<{
+        success: boolean;
+        invitation: { email: string; organizationName: string };
+      }>(`/invitations/${inviteId}`)
+      .then((response) => {
+        setInviteInfo(response.data.invitation);
+        setEmail(response.data.invitation.email);
+      })
+      .catch(() => {
+        setInviteInfo(null);
+        setError('This invitation is invalid or expired.');
+      });
+  }, [inviteToken, inviteId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,12 +81,23 @@ export default function Login() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await signup(name, email, password);
+        const registeredEmail = await signup(name, email, password, {
+          organizationName: inviteToken ? undefined : orgName.trim(),
+          inviteToken: inviteToken || undefined,
+        });
+        navigate('/verify', { state: { email: registeredEmail } });
       } else {
         await login(email, password);
+        navigate('/app');
       }
-      navigate('/app');
     } catch (err: any) {
+      if (
+        !isSignUp &&
+        err.message === 'Please verify your email'
+      ) {
+        navigate('/verify', { state: { email } });
+        return;
+      }
       setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
@@ -96,6 +164,12 @@ export default function Login() {
             <div className="mb-4 px-3 py-2 rounded-lg bg-danger-dim text-danger text-sm">{error}</div>
           )}
 
+          {isSignUp && inviteInfo && (
+            <div className="mb-4 px-3 py-2 rounded-lg bg-info-dim text-info text-sm">
+              You're joining <span className="font-semibold">{inviteInfo.organizationName}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-3">
             {isSignUp && (
               <div>
@@ -103,6 +177,14 @@ export default function Login() {
                 <input type="text" value={name} onChange={e => setName(e.target.value)}
                   className="w-full px-3 py-2 bg-bg-card border border-border rounded-lg text-sm text-text placeholder-text-dim focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-colors"
                   placeholder="Jane Doe" required />
+              </div>
+            )}
+            {isSignUp && !inviteToken && (
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1">Company name</label>
+                <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-card border border-border rounded-lg text-sm text-text placeholder-text-dim focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-colors"
+                  placeholder="Acme Inc." required />
               </div>
             )}
             <div>
@@ -135,11 +217,21 @@ export default function Login() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* <button onClick={() => signInWithGoogle('NexusDesk')}
-            className="w-full py-2 bg-bg-card border border-border hover:bg-bg-elevated rounded-lg text-sm font-medium text-text transition-colors flex items-center justify-center gap-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-            Continue with Google
-          </button> */}
+          {googleConfigured() && (
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={(response) =>
+                  handleGoogleSuccess(response.credential)
+                }
+                onError={() =>
+                  setError('Google sign-in failed, please try again.')
+                }
+                text={isSignUp ? 'signup_with' : 'signin_with'}
+                shape="rectangular"
+                width="320"
+              />
+            </div>
+          )}
 
           <p className="text-center text-sm text-text-muted mt-5">
             {isSignUp ? 'Have an account?' : "No account?"}{' '}

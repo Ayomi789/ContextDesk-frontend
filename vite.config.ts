@@ -27,5 +27,21 @@ export default defineConfig(async ({ mode }) => {
     server: {
       port: 5515,
     },
+
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: [
+              "react",
+              "react-dom",
+              "react-router-dom",
+            ],
+            motion: ["framer-motion"],
+            vendor: ["axios"],
+          },
+        },
+      },
+    },
   };
 });

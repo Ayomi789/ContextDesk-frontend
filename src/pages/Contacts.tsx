@@ -3,6 +3,8 @@ import api from "../lib/api";
 import type { Contact, Account } from "../lib/types";
 import EmptyState from "../components/EmptyState";
 import Modal from "../components/Modal";
+import Select from "../components/Select";
+import { CardsGridSkeleton } from "../components/Skeleton";
 import {
   Users,
   Plus,
@@ -98,8 +100,12 @@ export default function Contacts() {
       setContacts((current) =>
         current.filter((contact) => contact.id !== id)
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete contact:", error);
+
+      window.alert(
+        error?.message || "Failed to delete contact"
+      );
     }
   };
 
@@ -161,9 +167,7 @@ export default function Contacts() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-6 h-6 animate-spin text-accent" />
-        </div>
+        <CardsGridSkeleton />
       ) : filteredContacts.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -175,7 +179,7 @@ export default function Contacts() {
           description={
             search
               ? "Try a different search."
-              : "Add your first contact to get started."
+              : "Contacts belong to an account — add one first if you haven't."
           }
           action={
             !search ? (
@@ -368,9 +372,7 @@ function ContactModal({
       console.error("Failed to save contact:", error);
 
       setError(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Failed to save contact"
+        error?.message || "Failed to save contact"
       );
     } finally {
       setSaving(false);
@@ -425,22 +427,17 @@ function ContactModal({
             Account
           </label>
 
-          <select
+          <Select
             value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            className="w-full px-3 py-2.5 bg-bg-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent"
-          >
-            <option value="">Select an account</option>
-
-            {accounts.map((account) => (
-              <option
-                key={account.id}
-                value={account.id}
-              >
-                {account.name}
-              </option>
-            ))}
-          </select>
+            onChange={setAccountId}
+            variant="elevated"
+            placeholder="Select an account"
+            className="w-full py-2.5"
+            options={accounts.map((account) => ({
+              value: account.id,
+              label: account.name,
+            }))}
+          />
         </div>
 
         <div>

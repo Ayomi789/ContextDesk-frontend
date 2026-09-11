@@ -3,6 +3,9 @@ import api from "../lib/api";
 import type { Account } from "../lib/types";
 import EmptyState from "../components/EmptyState";
 import Modal from "../components/Modal";
+import Select from "../components/Select";
+import { formatDate } from "../lib/dates";
+import { CardsGridSkeleton } from "../components/Skeleton";
 import {
   Building2,
   Plus,
@@ -114,8 +117,7 @@ export default function Accounts() {
       console.error("Failed to delete account:", error);
 
       window.alert(
-        error?.response?.data?.message ||
-          "Failed to delete account"
+        error?.message || "Failed to delete account"
       );
     }
   };
@@ -166,9 +168,7 @@ export default function Accounts() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-6 h-6 animate-spin text-accent" />
-        </div>
+        <CardsGridSkeleton />
       ) : filteredAccounts.length === 0 ? (
         <EmptyState
           icon={Building2}
@@ -258,9 +258,7 @@ export default function Accounts() {
                 </span>
 
                 <span className="text-xs text-text-dim">
-                  {new Date(
-                    account.createdAt
-                  ).toLocaleDateString()}
+                  {formatDate(account.createdAt)}
                 </span>
               </div>
             </motion.div>
@@ -366,7 +364,7 @@ function AccountModal({
       );
 
       setError(
-        error?.response?.data?.message ||
+        error?.message ||
           `Failed to ${editing ? "update" : "create"} account`
       );
     } finally {
@@ -421,18 +419,18 @@ function AccountModal({
             Tier
           </label>
 
-          <select
+          <Select
             value={tier}
-            onChange={(e) => setTier(e.target.value)}
-            className="w-full px-3 py-2.5 bg-bg-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:border-accent"
-          >
-            <option value="Free">Free</option>
-            <option value="Starter">Starter</option>
-            <option value="Pro">Pro</option>
-            <option value="Enterprise">
-              Enterprise
-            </option>
-          </select>
+            onChange={setTier}
+            variant="elevated"
+            className="w-full py-2.5"
+            options={[
+              { value: 'Free', label: 'Free' },
+              { value: 'Starter', label: 'Starter' },
+              { value: 'Pro', label: 'Pro' },
+              { value: 'Enterprise', label: 'Enterprise' },
+            ]}
+          />
         </div>
 
         <div className="flex justify-end gap-2">

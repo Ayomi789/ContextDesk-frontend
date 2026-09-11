@@ -1,3 +1,22 @@
+export type TicketStatus =
+  | 'NEW'
+  | 'IN_PROGRESS'
+  | 'WAITING'
+  | 'RESOLVED';
+
+export type TicketPriority =
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'URGENT';
+
+export type SlaStatus =
+  | 'WITHIN_SLA'
+  | 'AT_RISK'
+  | 'BREACHED'
+  | 'RESOLVED'
+  | 'NO_SLA';
+
 export interface Account {
   id: string;
   name: string;
@@ -26,8 +45,11 @@ export interface Contact {
 export interface Ticket {
   id: string;
   subject: string;
-  status: string;
-  priority: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  slaDueAt: string | null;
+  slaStatus: SlaStatus;
+  triageReason: string | null;
   contactId: string;
   accountId: string;
   assigneeId: string | null;
@@ -36,6 +58,20 @@ export interface Ticket {
   contact?: Contact;
   account?: Account;
   assignee?: CrmUser | null;
+}
+
+/**
+ * Display row for the tickets table: API enums are formatted for
+ * badges ("In Progress") and relation names are flattened.
+ */
+export interface TicketRow
+  extends Omit<Ticket, 'status' | 'priority'> {
+  status: string;
+  priority: string;
+  contact_name: string;
+  account_name: string;
+  assignee_name: string;
+  created_at: string;
 }
 
 export interface Message {
@@ -49,30 +85,34 @@ export interface Message {
   author?: CrmUser | null;
 }
 
-export interface Tag {
-  id: string;
-  label: string;
-}
-
 export interface CrmUser {
   id: string;
   name: string;
   email: string;
   role: string;
+  organizationId: string;
+  organization?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }
 
+/** Mirrors GET /api/v1/dashboard (snake_case, as returned). */
 export interface DashboardStats {
-  totalTickets: number;
-  newTickets: number;
-  inProgress: number;
+  total_tickets: number;
+  new_tickets: number;
+  in_progress: number;
   waiting: number;
   resolved: number;
-  slaAtRisk: number;
-  byPriority: {
+  sla_at_risk: number;
+  sla_due_soon: number;
+  sla_on_track: number;
+  by_priority: {
     priority: string;
     count: number;
   }[];
-  volumeOverTime: {
+  volume_over_time: {
     date: string;
     count: number;
   }[];

@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import type { DashboardStats } from '../lib/types';
-import { Ticket, AlertTriangle, Clock, CheckCircle2, Inbox, Loader2, TrendingUp } from 'lucide-react';
+import type { DashboardStats, CrmUser, Account } from '../lib/types';
+import { Ticket, AlertTriangle, Clock, CheckCircle2, Inbox, TrendingUp, Check, X, type LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { DashboardSkeleton } from '../components/Skeleton';
+import { formatWeekday } from '../lib/dates';
 
-const statCards = [
+type StatKey = 'total_tickets' | 'new_tickets' | 'in_progress' | 'waiting' | 'resolved' | 'sla_at_risk';
+
+const statCards: { key: StatKey; label: string; icon: LucideIcon; color: string; bg: string }[] = [
   { key: 'total_tickets', label: 'Total Tickets', icon: Ticket, color: 'text-text', bg: 'bg-bg-elevated' },
   { key: 'new_tickets', label: 'New', icon: Inbox, color: 'text-info', bg: 'bg-info-dim' },
   { key: 'in_progress', label: 'In Progress', icon: TrendingUp, color: 'text-warning', bg: 'bg-warning-dim' },
@@ -16,23 +21,63 @@ const statCards = [
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [memberCount, setMemberCount] = useState(1);
+  const [accountCount, setAccountCount] = useState(1);
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem('nexus-onboarding-dismissed') === '1'
+  );
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get<DashboardStats>('/dashboard')
       .then(response => setStats(response.data))
       .catch(console.error)
       .finally(() => setLoading(false));
+    api.get<{ users: CrmUser[] }>('/users')
+      .then(response => setMemberCount(response.data.users.length))
+      .catch(() => {});
+    api.get<{ accounts: Account[] }>('/accounts')
+      .then(response => setAccountCount(response.data.accounts.length))
+      .catch(() => {});
   }, []);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-6 h-6 animate-spin text-accent" />
-    </div>
-  );
+  if (loading) return <DashboardSkeleton />;
 
   if (!stats) return <div className="text-text-muted">Failed to load dashboard</div>;
 
   const maxVolume = Math.max(...(stats.volume_over_time?.map(v => v.count) || [1]), 1);
+
+  const steps = [
+    {
+      key: 'team',
+      label: 'Invite your team',
+      desc: 'Support is a team sport',
+      done: memberCount > 1,
+      to: '/app/team',
+    },
+    {
+      key: 'account',
+      label: 'Add an account',
+      desc: 'A company you support',
+      done: accountCount > 0,
+      to: '/app/accounts',
+    },
+    {
+      key: 'ticket',
+      label: 'Open your first ticket',
+      desc: 'Needs an account + contact',
+      done: stats.total_tickets > 0,
+      to: '/app/tickets',
+    },
+  ];
+  const doneCount = steps.filter(s => s.done).length;
+  const showOnboarding =
+    !dismissed && doneCount < steps.length;
+
+  const dismiss = () => {
+    localStorage.setItem('nexus-onboarding-dismissed', '1');
+    setDismissed(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -40,6 +85,73 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-text">Dashboard</h1>
         <p className="text-sm text-text-muted mt-1">Overview of your support operations</p>
       </div>
+
+      {showOnboarding && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-bg-card border border-border rounded-xl p-5"
+        >
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-text">
+                Getting started ({doneCount}/{steps.length})
+              </h3>
+              <div className="h-1.5 w-48 bg-bg-elevated rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full rounded-full bg-accent transition-all duration-500"
+                  style={{ width: `${(doneCount / steps.length) * 100}%` }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={dismiss}
+              className="p-1.5 text-text-dim hover:text-text-muted transition-colors"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {steps.map(step => (
+              <button
+                key={step.key}
+                onClick={() => navigate(step.to)}
+                disabled={step.done}
+                className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                  step.done
+                    ? 'border-border bg-bg-elevated/50 opacity-70 cursor-default'
+                    : 'border-border hover:border-accent bg-bg-elevated/30'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    step.done
+                      ? 'bg-success-dim text-success'
+                      : 'bg-bg-elevated text-text-muted'
+                  }`}
+                >
+                  {step.done ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <span className="text-xs font-semibold">
+                      {steps.indexOf(step) + 1}
+                    </span>
+                  )}
+                </span>
+                <span>
+                  <span className="block text-sm font-medium text-text">
+                    {step.label}
+                  </span>
+                  <span className="block text-xs text-text-muted">
+                    {step.desc}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -55,7 +167,7 @@ export default function Dashboard() {
               <card.icon className={`w-4 h-4 ${card.color}`} strokeWidth={1.8} />
             </div>
             <div className="text-2xl font-bold text-text tracking-tight">
-              {(stats as any)[card.key] ?? 0}
+              {stats[card.key] ?? 0}
             </div>
             <div className="text-xs text-text-muted mt-0.5">{card.label}</div>
           </motion.div>
@@ -115,7 +227,7 @@ export default function Dashboard() {
                   className="w-full bg-text rounded min-h-[4px]"
                 />
                 <span className="text-[10px] text-text-dim">
-                  {new Date(v.date).toLocaleDateString('en', { weekday: 'short' })}
+                  {formatWeekday(v.date)}
                 </span>
               </div>
             ))}

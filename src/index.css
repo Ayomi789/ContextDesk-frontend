@@ -27,31 +27,31 @@
   --scrollbar-hover: #b5afa6;
 }
 
-/* ===== DARK ===== */
+/* ===== DARK (warm charcoal, low glare) ===== */
 .dark {
-  --color-bg: #0e0e10;
-  --color-bg-card: #18181b;
-  --color-bg-elevated: #212124;
-  --color-bg-hover: #2b2b30;
-  --color-border: #2e2e33;
-  --color-border-light: #3b3b42;
-  --color-text: #ececee;
-  --color-text-muted: #8e8e99;
-  --color-text-dim: #55555f;
-  --color-accent: #ececee;
-  --color-accent-hover: #d4d4d8;
-  --color-accent-dim: rgba(236, 236, 238, 0.08);
-  --color-accent-text: #ececee;
-  --color-success: #3fb950;
-  --color-success-dim: rgba(63, 185, 80, 0.12);
-  --color-warning: #d29922;
-  --color-warning-dim: rgba(210, 153, 34, 0.12);
-  --color-danger: #f85149;
-  --color-danger-dim: rgba(248, 81, 73, 0.12);
-  --color-info: #58a6ff;
-  --color-info-dim: rgba(88, 166, 255, 0.12);
-  --scrollbar-thumb: #3b3b42;
-  --scrollbar-hover: #4a4a52;
+  --color-bg: #151312;
+  --color-bg-card: #1d1b19;
+  --color-bg-elevated: #262320;
+  --color-bg-hover: #2e2a26;
+  --color-border: #332f2a;
+  --color-border-light: #453f37;
+  --color-text: #d9d3cb;
+  --color-text-muted: #9a918a;
+  --color-text-dim: #6b645d;
+  --color-accent: #ddd5c7;
+  --color-accent-hover: #cdc3b3;
+  --color-accent-dim: rgba(221, 213, 199, 0.09);
+  --color-accent-text: #ddd5c7;
+  --color-success: #6aa883;
+  --color-success-dim: rgba(106, 168, 131, 0.13);
+  --color-warning: #c2a15c;
+  --color-warning-dim: rgba(194, 161, 92, 0.13);
+  --color-danger: #d97373;
+  --color-danger-dim: rgba(217, 115, 115, 0.13);
+  --color-info: #7fa8d6;
+  --color-info-dim: rgba(127, 168, 214, 0.13);
+  --scrollbar-thumb: #453f37;
+  --scrollbar-hover: #544d45;
 }
 
 @theme {
@@ -95,3 +95,38 @@ body {
 
 html { scroll-behavior: smooth; }
 input, textarea, select { font-family: inherit; }
+
+/* Loading skeletons: theme-aware shimmer over elevated surfaces. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg-elevated);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-text) 9%, transparent),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s infinite;
+}
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+/* Interface density: Tailwind v4 spacing/type scale in rem units, so the
+   root font size proportionally tightens or loosens the whole UI. */
+html[data-density="compact"] { font-size: 15px; }
+html[data-density="comfortable"] { font-size: 17px; }
