@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import type {
   Ticket,
@@ -33,6 +34,7 @@ import { motion } from 'framer-motion';
 export default function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -457,7 +459,12 @@ export default function TicketDetail() {
             </div>
 
             <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
-              {messages.map((message, index) => (
+              {messages.map((message, index) => {
+                const isMine =
+                  !!message.authorId &&
+                  message.authorId === currentUser?.id;
+
+                return (
                 <motion.div
                   key={message.id}
                   initial={{
@@ -474,7 +481,9 @@ export default function TicketDetail() {
                   className={`p-4 ${
                     message.isInternalNote
                       ? 'bg-warning-dim/30'
-                      : ''
+                      : isMine
+                        ? 'bg-accent-dim/50'
+                        : ''
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -493,7 +502,7 @@ export default function TicketDetail() {
                     </span>
 
                     {message.senderType === 'CUSTOMER' && (
-                      <span className="text-xs text-text-dim">
+                      <span className="text-xs text-text-muted">
                         Customer
                       </span>
                     )}
@@ -505,7 +514,7 @@ export default function TicketDetail() {
                       </span>
                     )}
 
-                    <span className="text-xs text-text-dim ml-auto">
+                    <span className="text-xs text-text-muted ml-auto">
                       {formatDateTime(message.createdAt)}
                     </span>
                   </div>
@@ -514,7 +523,8 @@ export default function TicketDetail() {
                     {message.body}
                   </p>
                 </motion.div>
-              ))}
+                );
+              })}
 
               <div ref={messagesEnd} />
             </div>

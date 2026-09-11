@@ -18,6 +18,7 @@ import {
   Settings,
   Loader2,
   UserPlus,
+  CreditCard,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -273,7 +274,18 @@ export default function AppShell() {
         </div>
 
         <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => (
+          {[
+            ...navItems,
+            ...(user?.role === 'ADMIN'
+              ? [
+                  {
+                    to: '/app/billing',
+                    icon: CreditCard,
+                    label: 'Billing',
+                  },
+                ]
+              : []),
+          ].map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -8,12 +8,16 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Verify from './pages/Verify';
 import Intake from './pages/Intake';
+import Privacy from './pages/Privacy';
+import Help from './pages/Help';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import Contacts from './pages/Contacts';
 import Accounts from './pages/Accounts';
 import Team from './pages/Team';
+import Billing from './pages/Billing';
+import BillingCallback from './pages/BillingCallback';
 import Settings from './pages/Settings';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -42,6 +46,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/verify" element={<Verify />} />
             <Route path="/intake/:slug" element={<Intake />} />
+            <Route path="/billing/callback" element={<BillingCallback />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/help" element={<Help />} />
             <Route path="/app" element={
               <ProtectedRoute><AppShell /></ProtectedRoute>
             }>
@@ -51,6 +58,7 @@ export default function App() {
               <Route path="contacts" element={<Contacts />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="team" element={<Team />} />
+              <Route path="billing" element={<Billing />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

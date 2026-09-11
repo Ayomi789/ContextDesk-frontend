@@ -40,16 +40,16 @@ function StaggerItem({ children, index, className = '' }: { children: ReactNode;
 const features = [
   { icon: Ticket, title: 'Unified Ticketing', desc: 'Every support ticket linked to real customer records. No more context switching between tools.' },
   { icon: Brain, title: 'AI Reply Drafting', desc: 'Context-aware draft replies using full ticket history and customer data. Review and send in seconds.' },
-  { icon: Users, title: 'CRM Built In', desc: 'Contacts, accounts, and relationship history — all in one place. Auto-link by domain.' },
+  { icon: Users, title: 'CRM Built In', desc: 'Contacts, accounts, and relationship history — all in one place. Every ticket linked to real records.' },
   { icon: BarChart3, title: 'Real-time Dashboard', desc: 'Ticket volume, SLA tracking, priority distribution. Know your support health at a glance.' },
-  { icon: Shield, title: 'SLA Management', desc: 'Set response time targets. Get alerts before breaches. Keep your promises to customers.' },
+  { icon: Shield, title: 'SLA Management', desc: 'Deadlines set automatically from priority. At-risk and breached tickets surface before customers complain.' },
   { icon: MessageSquare, title: 'Internal Notes', desc: 'Private team discussions alongside customer conversations. Keep context without the noise.' },
 ];
 
 const plans = [
-  { name: 'Starter', price: '$29', period: '/agent/mo', features: ['Up to 5 agents', '1,000 tickets/mo', 'Basic AI drafting', 'Email support'], cta: 'Start free trial', popular: false },
-  { name: 'Pro', price: '$79', period: '/agent/mo', features: ['Unlimited agents', 'Unlimited tickets', 'Advanced AI features', 'SLA management', 'Priority support', 'Custom integrations'], cta: 'Start free trial', popular: true },
-  { name: 'Enterprise', price: 'Custom', period: '', features: ['Everything in Pro', 'SSO & SAML', 'Dedicated instance', '99.99% SLA', 'Custom onboarding', 'Phone support'], cta: 'Contact sales', popular: false },
+  { name: 'Free', price: '₦0', period: '', features: ['Up to 3 agents', '100 tickets/mo', 'AI drafting (limited)', 'Community support'], cta: 'Start free', popular: false },
+  { name: 'Starter', price: '₦15,600', period: '/agent/mo', features: ['Up to 10 agents', '10,000 tickets/mo', 'Basic AI drafting', 'Email support'], cta: 'Start free trial', popular: true },
+  { name: 'Pro', price: '₦50,700', period: '/agent/mo', features: ['Unlimited agents', 'Unlimited tickets', 'Advanced AI + triage', 'SLA management', 'Priority support', 'Custom integrations'], cta: 'Start free trial', popular: false },
 ];
 
 export default function Landing() {
@@ -81,6 +81,7 @@ export default function Landing() {
             <a href="#features" className="text-sm text-text-muted hover:text-text transition-colors">Features</a>
             <a href="#pricing" className="text-sm text-text-muted hover:text-text transition-colors">Pricing</a>
             <a href="#about" className="text-sm text-text-muted hover:text-text transition-colors">About</a>
+            <Link to="/help" className="text-sm text-text-muted hover:text-text transition-colors">Help</Link>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -139,11 +140,11 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
           >
             <Link to="/login" className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-medium transition-colors">
-              Start Free Trial <ArrowRight className="w-3.5 h-3.5" />
+              Start Free <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-            <Link to="/login" className="inline-flex items-center gap-2 px-5 py-2.5 border border-border hover:border-border-light bg-bg-card text-text rounded-lg text-sm font-medium transition-colors">
-              Live Demo
-            </Link>
+            <a href="#pricing" className="inline-flex items-center gap-2 px-5 py-2.5 border border-border hover:border-border-light bg-bg-card text-text rounded-lg text-sm font-medium transition-colors">
+              See Pricing
+            </a>
           </motion.div>
         </motion.div>
 
@@ -185,45 +186,45 @@ export default function Landing() {
 
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4 sm:px-6 border-t border-border">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <Reveal>
             <div className="text-center mb-12">
               <h2 className="text-2xl font-bold text-text">Pricing</h2>
               <p className="text-text-muted mt-2 text-sm">Start free. Scale as you grow.</p>
             </div>
           </Reveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map((p, i) => (
               <StaggerItem
                 key={p.name}
                 index={i}
-                className={`rounded-xl p-6 border ${
+                className={`rounded-xl p-6 border bg-bg-card transition-all duration-200 hover:-translate-y-1.5 ${
                   p.popular
-                    ? 'bg-text border-text text-bg'
-                    : 'bg-bg-card border-border'
+                    ? 'border-accent shadow-xl shadow-accent/10 hover:shadow-2xl hover:shadow-accent/20 md:-my-2 md:py-8 md:scale-[1.04]'
+                    : 'border-border hover:border-border-light hover:shadow-lg hover:shadow-black/5'
                 }`}
               >
                 {p.popular && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-bg/15 text-bg mb-3 uppercase tracking-wide">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-accent text-bg mb-3 uppercase tracking-wide">
                     Popular
                   </span>
                 )}
-                <h3 className={`text-base font-semibold ${p.popular ? 'text-bg' : 'text-text'}`}>{p.name}</h3>
+                <h3 className="text-base font-semibold text-text">{p.name}</h3>
                 <div className="mt-2">
-                  <span className={`text-2xl font-bold ${p.popular ? 'text-bg' : 'text-text'}`}>{p.price}</span>
-                  <span className={`text-sm ${p.popular ? 'text-bg/50' : 'text-text-dim'}`}>{p.period}</span>
+                  <span className="text-2xl font-bold text-text">{p.price}</span>
+                  <span className="text-sm text-text-dim">{p.period}</span>
                 </div>
                 <ul className="mt-5 space-y-2.5">
                   {p.features.map(f => (
-                    <li key={f} className={`flex items-center gap-2 text-[13px] ${p.popular ? 'text-bg/70' : 'text-text-muted'}`}>
-                      <Check className={`w-3.5 h-3.5 flex-shrink-0 ${p.popular ? 'text-bg/80' : 'text-text'}`} strokeWidth={2.5} />
+                    <li key={f} className="flex items-center gap-2 text-[13px] text-text-muted">
+                      <Check className="w-3.5 h-3.5 flex-shrink-0 text-text" strokeWidth={2.5} />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <Link to="/login" className={`mt-6 block text-center py-2 rounded-lg text-sm font-medium transition-colors ${
                   p.popular
-                    ? 'bg-bg text-text hover:opacity-90'
+                    ? 'bg-accent text-bg hover:bg-accent-hover'
                     : 'bg-text text-bg hover:opacity-90'
                 }`}>
                   {p.cta}
@@ -243,22 +244,28 @@ export default function Landing() {
           <Reveal delay={0.1}>
             <div className="space-y-4 text-[15px] text-text-muted leading-relaxed">
               <p>
-                Support teams juggle separate CRM and ticketing tools, losing context with every tab switch. NexusDesk unifies both into a single platform with clean relational architecture.
+                Support teams juggle separate CRM and ticketing tools, losing context with every tab switch. NexusDesk unifies both into a single platform where every ticket is linked to a real customer record.
               </p>
               <p>
-                AI is integrated server-side for security and cost control — Claude drafts contextual replies based on full ticket history, customer notes, and account data. Every response is reviewable before sending.
+                AI is integrated server-side — it drafts contextual replies from full ticket history and auto-triages incoming requests by urgency, with every output reviewable before sending.
               </p>
               <p>
-                Built with React, TypeScript, Tailwind CSS, PostgreSQL, and Vercel. Production-grade engineering with thoughtful UX.
+                Each company gets its own private workspace: invite your team, share a public support link, and watch complaints arrive as prioritized tickets with deadlines attached.
               </p>
             </div>
           </Reveal>
           <Reveal delay={0.2}>
-            <div className="flex flex-wrap gap-1.5 mt-6">
-              {['React', 'TypeScript', 'Tailwind', 'PostgreSQL', 'Supabase', 'Vercel', 'Claude'].map(t => (
-                <span key={t} className="px-2.5 py-1 rounded text-xs font-medium bg-bg-elevated text-text-dim">
-                  {t}
-                </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-8">
+              {[
+                { n: '01', t: 'Share your link', d: 'Customers file requests through your public form — no account needed.' },
+                { n: '02', t: 'AI triages instantly', d: 'Every complaint is prioritized with a deadline before anyone reads it.' },
+                { n: '03', t: 'Team resolves together', d: 'Replies, internal notes, and SLA tracking in one thread.' },
+              ].map(s => (
+                <div key={s.n} className="rounded-xl border border-border bg-bg-card p-4">
+                  <p className="text-xs font-bold text-accent tabular-nums">{s.n}</p>
+                  <p className="text-sm font-semibold text-text mt-1.5">{s.t}</p>
+                  <p className="text-[13px] text-text-muted mt-1 leading-relaxed">{s.d}</p>
+                </div>
               ))}
             </div>
           </Reveal>
@@ -267,13 +274,41 @@ export default function Landing() {
 
       {/* Footer */}
       <Reveal>
-        <footer className="border-t border-border py-6 px-4 sm:px-6">
-          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <LogoMark className="w-5 h-5" />
-              <span className="text-sm font-medium text-text">NexusDesk</span>
+        <footer className="border-t border-border px-4 sm:px-6 pt-10 pb-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between gap-8">
+              <div>
+                <div className="flex items-center gap-2">
+                  <LogoMark className="w-6 h-6" />
+                  <span className="text-[15px] font-semibold text-text">NexusDesk</span>
+                </div>
+                <p className="text-xs text-text-dim mt-2 max-w-[220px] leading-relaxed">
+                  CRM and ticketing, unified. Built for support teams.
+                </p>
+              </div>
+              <div className="flex gap-12 sm:gap-16">
+                <div>
+                  <p className="text-[11px] font-semibold text-text-dim uppercase tracking-wider mb-3">Product</p>
+                  <ul className="space-y-2.5">
+                    <li><a href="#features" className="text-[13px] text-text-muted hover:text-text transition-colors">Features</a></li>
+                    <li><a href="#pricing" className="text-[13px] text-text-muted hover:text-text transition-colors">Pricing</a></li>
+                    <li><Link to="/login" className="text-[13px] text-text-muted hover:text-text transition-colors">Get started</Link></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-text-dim uppercase tracking-wider mb-3">Resources</p>
+                  <ul className="space-y-2.5">
+                    <li><Link to="/help" className="text-[13px] text-text-muted hover:text-text transition-colors">Help Center</Link></li>
+                    <li><Link to="/privacy" className="text-[13px] text-text-muted hover:text-text transition-colors">Privacy</Link></li>
+                    <li><a href="#about" className="text-[13px] text-text-muted hover:text-text transition-colors">About</a></li>
+                  </ul>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-text-dim">© {new Date().getFullYear()} NexusDesk</p>
+            <div className="border-t border-border mt-8 pt-5 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <p className="text-xs text-text-dim">© {new Date().getFullYear()} NexusDesk</p>
+              <p className="text-xs text-text-dim">Support, finally unified.</p>
+            </div>
           </div>
         </footer>
       </Reveal>
