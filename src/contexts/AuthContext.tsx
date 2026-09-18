@@ -50,11 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api
       .get<{ success: boolean; user: CrmUser }>("/auth/me")
       .then((response) => {
-        console.log("AUTH /me RESPONSE:", response.data);
         setUser(response.data.user);
       })
       .catch((error) => {
-        console.error("AUTH /me FAILED:", error);
         localStorage.removeItem("crm_token");
         setUser(null);
       })
@@ -72,8 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
     });
-
-    console.log("LOGIN RESPONSE:", response.data);
 
     if (!response.data?.token) {
       throw new Error("Login succeeded but no authentication token was returned.");
@@ -100,8 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       inviteToken: opts?.inviteToken || undefined,
     });
 
-    console.log("REGISTER RESPONSE:", response.data);
-
     if (!response.data?.user?.email) {
       throw new Error("Registration failed, please try again.");
     }
@@ -123,8 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       inviteToken: opts?.inviteToken || undefined,
     });
 
-    console.log("GOOGLE RESPONSE:", response.data);
-
     if (!response.data?.token) {
       throw new Error("Google sign-in failed, please try again.");
     }
@@ -142,8 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       code,
     });
-
-    console.log("VERIFY RESPONSE:", response.data);
 
     if (!response.data?.token) {
       throw new Error("Verification failed, please try again.");
